@@ -12,8 +12,8 @@ struct LinkView: View {
                 .resizable()
                 .frame(maxWidth: 48, maxHeight: 48)
                 .scaledToFit()
+                .accessibilityLabel("\(item.title) book cover")
             Text(item.title)
         }
     }
 }
-

@@ -5,21 +5,20 @@ import SwiftUI
 
 struct ContentView: View {
     
-    let books: [Book] = getItems()
+    @State private var books: [Book] = getItems()
     
     var body: some View {
         NavigationStack{
-            List(books){ book in
+            List($books){ $book in
                 NavigationLink(destination:
-                                DetailView(book: book)){
+                                DetailView(book: $book)){
                     LinkView(item: book)
                 }
-                .border(Color.red, width: 2)
+                .accessibilityHint("Click for detail view of \(book.title)")
             }
         .navigationTitle("LOTR Trilogy")
-        .border(Color.yellow, width: 2)
+        .accessibilityAddTraits(.isHeader)
         }
-        .border(Color.green, width: 2)
     }
 }
 
