@@ -4,16 +4,16 @@
 import SwiftUI
 
 struct LinkView: View {
-    let item: Book
+    let book: Book
     
     var body: some View {
         HStack{
-            Image(item.image)
+            Image(book.image)
                 .resizable()
                 .frame(maxWidth: 48, maxHeight: 48)
                 .scaledToFit()
-                .accessibilityLabel("\(item.title) book cover")
-            Text(item.title)
+                .accessibilityLabel("\(book.title) book cover")
+            Text(book.title)
         }
     }
 }

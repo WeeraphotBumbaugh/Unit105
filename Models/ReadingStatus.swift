@@ -3,7 +3,7 @@
 //  Created by Weeraphot Bumbaugh on 8/11/25.
 import SwiftUI
 
-enum ReadingStatus: String {
+enum ReadingStatus: String, CaseIterable, Hashable{
     case planToRead = "Plan to Read"
     case reading = "Reading"
     case dropped = "Dropped"

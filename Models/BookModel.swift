@@ -5,12 +5,14 @@ import SwiftUI
 
 struct Book: Identifiable {
     let id = UUID()
-    let title: String
-    let author: String
-    let image: String
-    let description: String
-    let rating: Int
-    let review: String
-    let status: ReadingStatus
+    var title: String
+    var author: String
+    var image: String = "default-book"
+    var description: String = ""
+    var rating: Int = 0
+    var review: String = ""
+    var status: ReadingStatus = .planToRead
+    var genre: Genre
+    var isFavorite: Bool = false
 }
 
