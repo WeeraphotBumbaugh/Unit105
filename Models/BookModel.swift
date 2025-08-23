@@ -1,7 +1,7 @@
 //  BookModel.swift
 //  Class105
 //  Created by Weeraphot Bumbaugh on 8/6/25.
-import SwiftUI
+import Foundation
 
 struct Book: Identifiable {
     let id = UUID()

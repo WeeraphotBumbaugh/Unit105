@@ -5,7 +5,20 @@ import SwiftUI
 
 struct ContentView: View {
     
+    @AppStorage(SETTINGS_THEME_KEY) private var theme: Theme = .system
+    @AppStorage(SETTINGS_APP_ACCENT_COLOR_KEY) private var appAccentColor: Color = .accentColor
     @State private var books: [Book] = getItems()
+    
+    var colorScheme: ColorScheme? {
+        switch(theme) {
+        case .dark:
+            return .dark
+        case .light:
+            return .light
+        case .system:
+            return nil
+        }
+    }
     
     var body: some View {
         TabView{
@@ -18,7 +31,14 @@ struct ContentView: View {
             .tabItem{
                 Label("Favorites", systemImage: "heart.fill")
             }
-        }
+            
+            SettingsView()
+            .tabItem{
+                    Label("Settings", systemImage: "gearshape")
+                }
+        } // TabView
+        .tint(appAccentColor)
+        .preferredColorScheme(colorScheme)
     }
 }
 
