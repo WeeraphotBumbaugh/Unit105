@@ -2,12 +2,22 @@
 //  Class105
 //  Created by Weeraphot Bumbaugh on 8/6/25.
 import SwiftUI
+import SwiftData
 
 struct DetailView: View {
     
     @Binding var book: Book
-    
     @State private var showingEditSheet = false
+    @Environment(\.modelContext) var modelContext
+    
+    var bookImage: UIImage? {
+        guard let imageId = book.imageId,
+              let imageModel = modelContext.model(for: imageId) as? UploadedImage,
+              let imageData = imageModel.imageData! as Data? else {
+            return UIImage(systemName: "book")
+        }
+        return UIImage(data: imageData)
+    }
 
     var body: some View {
         ZStack{
@@ -20,7 +30,7 @@ struct DetailView: View {
             ScrollView{
                 VStack(alignment: .leading, spacing: 30) {
                     HStack {
-                        Image(book.image)
+                        Image(uiImage: bookImage!)
                             .resizable()
                             .scaledToFit()
                             .frame(maxWidth: 100, maxHeight: 150)

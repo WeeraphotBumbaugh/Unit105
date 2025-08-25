@@ -26,13 +26,15 @@ struct BookListView: View {
     
     var body: some View {
         NavigationStack{
-            List(filteredBooks, id: \.id) { book in
-                if let index = books.firstIndex(where: { $0.id == book.id }){
-                    NavigationLink(destination:
-                                    DetailView(book: $books[index])){
-                        LinkView(book: book)
+            List{
+                ForEach(filteredBooks, id: \.id) { book in
+                    if let index = books.firstIndex(where: { $0.id == book.id }){
+                        NavigationLink(destination:
+                                        DetailView(book: $books[index])){
+                            LinkView(book: book)
+                        }
+                        .accessibilityHint("Click for detail view of \(book.title)")
                     }
-                    .accessibilityHint("Click for detail view of \(book.title)")
                 }
             }
         .navigationTitle("My Books")
@@ -62,7 +64,7 @@ struct BookListView: View {
                         newBook = Book(
                             title: "",
                             author: "",
-                            image: "default-book",
+//                            image: "default-book",
                             description: "",
                             rating: 0,
                             review: "",

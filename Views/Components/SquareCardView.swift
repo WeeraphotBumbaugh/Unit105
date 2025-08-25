@@ -6,12 +6,21 @@ import SwiftUI
 struct SquareCardView: View {
     @AppStorage(SETTINGS_GRID_SHOW_AUTHOR_KEY) private var gridShowAuthor = true
     let book: Book
+    @Environment(\.modelContext) var modelContext
+    var bookImage: UIImage? {
+        guard let imageId = book.imageId,
+              let imageModel = modelContext.model(for: imageId) as? UploadedImage,
+              let imageData = imageModel.imageData! as Data? else {
+            return UIImage(systemName: "book")
+        }
+        return UIImage(data: imageData)
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
             // Use GeometryReader so we size the image to the exact card frame received
             GeometryReader { proxy in
-                Image(book.image)
+                Image(uiImage: bookImage!)
                     .resizable()
                     .scaledToFill()
                     .frame(width: proxy.size.width, height: proxy.size.height)

@@ -12,6 +12,12 @@ struct Class105App: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .modelContainer(for:
+                    [
+                    UploadedImage.self,
+                    PersistentBook.self
+                    ]
+            )
         }
     }
 }

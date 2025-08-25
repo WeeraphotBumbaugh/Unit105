@@ -6,7 +6,7 @@
 let NEW_BOOK = Book(
     title: "",
     author: "",
-    image: "default-book",
+//    image: "default-book",
     description: "",
     rating: 0,
     review: "",

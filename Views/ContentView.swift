@@ -35,7 +35,11 @@ struct ContentView: View {
             SettingsView()
             .tabItem{
                     Label("Settings", systemImage: "gearshape")
-                }
+            }
+            ImageViewer()
+            .tabItem{
+                    Label("Image Viewer", systemImage: "photo")
+            }
         } // TabView
         .tint(appAccentColor)
         .preferredColorScheme(colorScheme)
