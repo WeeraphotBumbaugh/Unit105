@@ -2,19 +2,20 @@
 //  Class105
 //  Created by Weeraphot Bumbaugh on 8/6/25.
 
-func getItems() -> [Book] {
-    return [
-        // --- Originals ---
-        Book(
-            title: "The Fellowship of the Ring",
-            author: "J.R.R. Tolkien",
-//            image: "book1",
-            description: "The first book in the Lord of the Rings trilogy, where Frodo begins his perilous journey to destroy the One Ring. It introduces the Fellowship and the vast world of Middle-earth.",
-            rating: 4,
-            review: "A classic tale of good vs evil, a little slow at first but very rewarding.",
-            status: .finished,
-            genre: .fantasy
-        ),
+//func getItems() -> [PersistentBook] {
+//    return [
+//        // --- Originals ---
+//        PersistentBook(
+//            title: "The Fellowship of the Ring",
+//            author: "J.R.R. Tolkien",
+////            imageData: "book1",
+//            summary: "The first book in the Lord of the Rings trilogy, where Frodo begins his perilous journey to destroy the One Ring. It introduces the Fellowship and the vast world of Middle-earth.",
+//            rating: 4,
+//            review: "A classic tale of good vs evil, a little slow at first but very rewarding.",
+//            status: .finished,
+//            genre: .fantasy,
+//            isFavorite: true
+//        ),
 //        Book(
 //            title: "The Two Towers",
 //            author: "J.R.R. Tolkien",
@@ -450,5 +451,5 @@ func getItems() -> [Book] {
 //            status: .planToRead,
 //            genre: .nonfiction
 //        )
-    ]
-}
+//    ]
+//}

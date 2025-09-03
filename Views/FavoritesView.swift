@@ -1,52 +1,53 @@
 //  FavoritesView.swift
 //  Class105
-//  Created by Weeraphot Bumbaugh on 8/16/25.
 import SwiftUI
+import SwiftData
 
 struct FavoritesView: View {
-    
-    @Binding var books: [Book]
-    @State var showingFilterSheet = false
-    @State var selectedGenre: Genre?
-    @State var selectedStatus: ReadingStatus?
+    @Query(sort: [SortDescriptor(\PersistentBook.title)]) private var books: [PersistentBook]
+
+    @State private var showingFilterSheet = false
+    @State private var selectedGenre: Genre?
+    @State private var selectedStatus: ReadingStatus?
+
     @AppStorage(SETTINGS_GRID_COLUMN_NUMBERS_KEY) private var gridColumnNumber: Int = 2
-    
-    //    private var gridLayout: [GridItem] {
-    //        Array(repeating: GridItem(.flexible(), spacing: 12), count: gridColumnNumber)
-    //    }
-    private let hPad: CGFloat = 16 // Horizontal padding for grid area
+
+    private let hPad: CGFloat = 16
     private let cellSpacing: CGFloat = 12
-    
-    private var favoriteBooks: [Binding<Book>] {
-        $books.filter { $0.wrappedValue.isFavorite &&
-            (selectedGenre == nil || $0.wrappedValue.genre == selectedGenre!) &&
-            (selectedStatus == nil || $0.wrappedValue.status == selectedStatus!)
+
+    private var favoriteBooks: [PersistentBook] {
+        books.filter { b in
+            guard b.isFavorite else { return false }
+            if let g = selectedGenre, b.genre != g { return false }
+            if let s = selectedStatus, b.status != s { return false }
+            return true
         }
     }
-    
+
     var body: some View {
-        NavigationStack{
-            ScrollView{
-                // Compute side using screen width
+        NavigationStack {
+            ScrollView {
+                // Grid sizing identical to legacy version
                 let columns = max(1, gridColumnNumber)
                 let totalSpacing = cellSpacing * CGFloat(columns - 1)
                 let availableWidth = UIScreen.main.bounds.width - (hPad * 2) - totalSpacing
                 let side = floor(availableWidth / CGFloat(columns))
-                
+
                 if favoriteBooks.isEmpty {
                     Text("No favorite books yet!")
                         .frame(maxWidth: .infinity, minHeight: 200)
                 }
-                    
+
                 LazyVGrid(
                     columns: Array(repeating: GridItem(.fixed(side), spacing: cellSpacing, alignment: .top), count: columns),
                     spacing: cellSpacing
                 ) {
-                    ForEach(favoriteBooks, id: \.wrappedValue.id) { book in
-                        // Because I'm using book.id from favoriteBooks, it's of type Binding<Book>, so I need book.wrappedValue.id instead of book.id
-                        NavigationLink(value: book.wrappedValue.id){
-                            SquareCardView(book: book.wrappedValue)
-                                .frame(width: side, height: side * 1.5) // Hard Square
+                    ForEach(favoriteBooks) { book in
+                        NavigationLink {
+                            DetailView(book: book)
+                        } label: {
+                            SquareCardViewPersistent(book: book)
+                                .frame(width: side, height: side * 1.5)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
@@ -54,30 +55,78 @@ struct FavoritesView: View {
                 }
                 .padding(.horizontal, hPad)
                 .padding(.vertical, 8)
-                
-            } // ScrollView
-                .navigationTitle("Favorites")
-                .navigationDestination(for: UUID.self){ bookId in
-                    if let bookIndex = books.firstIndex(where: {$0.id == bookId}){
-                        DetailView(book: $books[bookIndex])
-                    } else {
-                        Text("Book not found")
-                    }
+            }
+            .navigationTitle("Favorites")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Filter") { showingFilterSheet = true }
+                        .accessibilityLabel("Filter button")
+                        .accessibilityHint("Click to filter")
                 }
-                .toolbar {
-                    // .navigationBarLeading is getting deprecated
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button("Filter") { showingFilterSheet = true }
-                            .accessibilityLabel("Filter button")
-                            .accessibilityHint("Click to filter")
-                    }
+            }
+            .sheet(isPresented: $showingFilterSheet) {
+                FilterView(selectedGenre: $selectedGenre, selectedStatus: $selectedStatus)
+            }
+        }
+    }
+}
+
+// MARK: - Card view matching legacy feel
+private struct SquareCardViewPersistent: View {
+    @AppStorage(SETTINGS_GRID_SHOW_AUTHOR_KEY) private var gridShowAuthor = true
+    let book: PersistentBook
+
+    private var cover: UIImage {
+        if let d = book.imageData, let img = UIImage(data: d) { return img }
+        return UIImage(systemName: "book") ?? UIImage()
+    }
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            // Match legacy: size image exactly to card bounds, add subtle dark overlay
+            GeometryReader { proxy in
+                Image(uiImage: cover)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .clipped()
+                    .overlay(Color.black.opacity(0.25)) // why: improve text contrast
+            }
+
+            // Overlay content (labels) to avoid affecting layout
+            VStack(spacing: 6) {
+                Text(book.title)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .padding(8)
+                    .frame(maxWidth: .infinity)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
+
+                if gridShowAuthor {
+                    Text(book.author)
+                        .font(.footnote)
+                        .foregroundColor(.white.opacity(0.9))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(Color.black.opacity(0.5)))
                 }
-                .sheet(isPresented: $showingFilterSheet) {
-                    FilterView(
-                        selectedGenre: $selectedGenre,
-                        selectedStatus: $selectedStatus
-                    )
-            } // NavigationStack
-        } // View
+
+                Text(book.genre.rawValue)
+                    .font(.caption2)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Color.blue.opacity(0.7)))
+                    .padding(.bottom, 6)
+            }
+            .padding(.horizontal, 8)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(book.title) by \(book.author)")
     }
 }

@@ -1,30 +1,26 @@
 //  LinkView.swift
 //  Class105
 //  Created by Weeraphot Bumbaugh on 8/6/25.
+// LinkView.swift
 import SwiftUI
-import SwiftData
 
-struct LinkView: View {
-    let book: Book
-    
-    @Environment(\.modelContext) var modelContext
-    var bookImage: UIImage? {
-        guard let imageId = book.imageId,
-              let imageModel = modelContext.model(for: imageId) as? UploadedImage,
-              let imageData = imageModel.imageData! as Data? else {
-            return UIImage(systemName: "book")
-        }
-        return UIImage(data: imageData)
-    }
-    
+struct LinkViewPersistent: View {
+    let book: PersistentBook
     var body: some View {
-        HStack{
-            Image(uiImage: bookImage!)
-                .resizable()
-                .frame(maxWidth: 48, maxHeight: 48)
-                .scaledToFit()
-                .accessibilityLabel("\(book.title) book cover")
-            Text(book.title)
+        HStack(spacing: 12) {
+            BookCoverView(data: book.imageData, accessibilityLabel: "\(book.title) cover")
+                .frame(width: 48, height: 48)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(book.title)
+                    .font(.headline)
+                    .lineLimit(2)
+                Text(book.author)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer()
         }
     }
 }

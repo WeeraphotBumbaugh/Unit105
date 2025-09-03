@@ -1,84 +1,66 @@
 //  BookListView.swift
 //  Class105
-//  Created by Weeraphot Bumbaugh on 8/16/25.
 import SwiftUI
+import SwiftData
 
 struct BookListView: View {
-    
-    @Binding var books: [Book]
+    @Query(sort: [SortDescriptor(\PersistentBook.title)]) private var books: [PersistentBook]
+    @Environment(\.modelContext) private var ctx
+
     @State private var activeSheet: ActiveSheet? = nil
-    @State var selectedGenre: Genre?
-    @State var selectedStatus: ReadingStatus?
-    @State private var newBook = NEW_BOOK
-    
-    private var filteredBooks: [Book] {
-        books.filter { book in
-            var matches = true
-            if let genre = selectedGenre {
-                matches = matches && book.genre == genre
-            }
-            if let status = selectedStatus {
-                matches = matches && book.status == status
-            }
-            return matches
+    @State private var selectedGenre: Genre?
+    @State private var selectedStatus: ReadingStatus?
+
+    // Simple in-memory filtering; nil == "All"
+    private var filteredBooks: [PersistentBook] {
+        books.filter { b in
+            (selectedGenre == nil || b.genre == selectedGenre!) &&
+            (selectedStatus == nil || b.status == selectedStatus!)
         }
     }
-    
+
     var body: some View {
-        NavigationStack{
-            List{
-                ForEach(filteredBooks, id: \.id) { book in
-                    if let index = books.firstIndex(where: { $0.id == book.id }){
-                        NavigationLink(destination:
-                                        DetailView(book: $books[index])){
-                            LinkView(book: book)
+        NavigationStack {
+            List {
+                ForEach(filteredBooks) { book in
+                    NavigationLink {
+                        DetailView(book: book)
+                    } label: {
+                        LinkViewPersistent(book: book)
+                    }
+                    .accessibilityHint("Click for detail view of \(book.title)")
+                }
+                .onDelete(perform: delete)
+            }
+            .navigationTitle("My Books")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Filter") { activeSheet = .filter }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    HStack(spacing: 16) {
+                        EditButton() // enables swipe-to-delete UI
+                        Button { activeSheet = .addBook } label: {
+                            Image(systemName: "plus.circle.fill").font(.title2)
                         }
-                        .accessibilityHint("Click for detail view of \(book.title)")
+                        .accessibilityLabel("Add new book")
                     }
                 }
             }
-        .navigationTitle("My Books")
-        .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                Button(action: { activeSheet = .addBook }) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                }
-                .accessibilityLabel("Add new book")
-            }
-            ToolbarItemGroup(placement: .topBarLeading) {
-                Button("Filter") { activeSheet = .filter }
-                    .accessibilityLabel("Filter button")
-                    .accessibilityHint("Click to filter")
-            }
-        }
-        .accessibilityAddTraits(.isHeader)
-        .sheet(item: $activeSheet) { sheet in
-            switch sheet {
-            case .addBook:
-                EditView(book: $newBook)
-                    .onDisappear {
-                        if !newBook.title.isEmpty {
-                            books.append(newBook)
-                        }
-                        newBook = Book(
-                            title: "",
-                            author: "",
-//                            image: "default-book",
-                            description: "",
-                            rating: 0,
-                            review: "",
-                            status: .planToRead,
-                            genre: .fantasy
-                        )
-                    }
-            case .filter:
-                FilterView(
-                    selectedGenre: $selectedGenre,
-                    selectedStatus: $selectedStatus
-                )
+            .sheet(item: $activeSheet) { sheet in
+                switch sheet {
+                case .addBook:
+                    EditView() // add mode
+                case .filter:
+                    FilterView(selectedGenre: $selectedGenre, selectedStatus: $selectedStatus)
                 }
             }
         }
+    }
+
+    // MARK: Delete
+    private func delete(at offsets: IndexSet) {
+        for i in offsets { ctx.delete(filteredBooks[i]) }
+        try? ctx.save()
     }
 }

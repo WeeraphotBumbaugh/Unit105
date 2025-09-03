@@ -1,85 +1,152 @@
 //  EditView.swift
 //  Class105
-//  Created by Weeraphot Bumbaugh on 8/11/25.
 import SwiftUI
-import PhotosUI
 import SwiftData
+import PhotosUI
 
 struct EditView: View {
-    
-    @Binding var book: Book
-    @State private var bookCopy: Book
-    @Environment(\.dismiss) var dismiss
-    @Environment(\.modelContext) var modelContext
-    @State private var navigationTitle: String
-    @State private var photoPickerItem: PhotosPickerItem?
-    @State var bookImage: UIImage?
-    @State var bookImageCover: UIImage?
-    
-    // A custom initializer to set the title when the view is first created.
-    init(book: Binding<Book>) {
-        // The underscore '_book' refers to the Binding property wrapper itself.
-        self._book = book
-        // The underscore '_navigationTitle' refers to the State property wrapper.
-        // We set it's initial value based on the book's state at this moment.
-        self._navigationTitle = State(initialValue: book.wrappedValue.title.isEmpty ? "Add Book" : "Edit Book")
-        self._bookCopy = State(initialValue: book.wrappedValue)
+    private enum Mode { case add, edit }
+    private let mode: Mode
+    private var book: PersistentBook?
+
+    // Env
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var ctx
+
+    // Form state
+    @State private var title: String
+    @State private var author: String
+    @State private var summary: String
+    @State private var rating: Int
+    @State private var review: String
+    @State private var status: ReadingStatus
+    @State private var genre: Genre
+    @State private var isFavorite: Bool
+    @State private var imageData: Data?
+    @State private var pickerItem: PhotosPickerItem?
+
+    // Init
+    init(book: PersistentBook? = nil) {
+        self.book = book
+        self.mode = (book == nil) ? .add : .edit
+        _title      = State(initialValue: book?.title ?? "")
+        _author     = State(initialValue: book?.author ?? "")
+        _summary    = State(initialValue: book?.summary ?? "")
+        _rating     = State(initialValue: book?.rating ?? 0)
+        _review     = State(initialValue: book?.review ?? "")
+        _status     = State(initialValue: book?.status ?? .planToRead)
+        _genre      = State(initialValue: book?.genre ?? .fantasy)
+        _isFavorite = State(initialValue: book?.isFavorite ?? false)
+        _imageData  = State(initialValue: book?.imageData)
     }
-    
+
+    private var canSave: Bool {
+        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !author.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     var body: some View {
         NavigationStack {
             Form {
-                Section(header: Text("Book Cover")) {
-                    ImageField(image: $bookImage)
-                    ImageField(image: $bookImageCover)
-                }
-                
-                Section(header: Text("Book Details")) {
-                    TextField("Title", text: $book.title)
-                    TextField("Author", text: $book.author)
-                    
-                    Picker("Status", selection: $book.status){
-                        ForEach(ReadingStatus.allCases, id: \.self) { status in
-                            Text(status.rawValue).tag(status)
+                // Cover
+                Section("Book Cover") {
+                    HStack(spacing: 12) {
+                        BookCoverView(data: imageData)
+                            .frame(width: 64, height: 64)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .accessibilityLabel("Selected cover preview")
+
+                        PhotosPicker("Choose Cover", selection: $pickerItem, matching: .images)
+                            .task(id: pickerItem) {
+                                if let item = pickerItem, let data = try? await item.loadTransferable(type: Data.self) {
+                                    imageData = data
+                                }
+                            }
+
+                        if imageData != nil {
+                            Button("Remove") { imageData = nil }
+                                .foregroundStyle(.red)
                         }
                     }
-                    Picker("Genre", selection: $book.genre){
-                        ForEach(Genre.allCases, id: \.self) { genre in
-                            Text(genre.rawValue).tag(genre)
+                }
+
+                // Details
+                Section("Book Details") {
+                    TextField("Title", text: $title)
+                    TextField("Author", text: $author)
+
+                    Picker("Status", selection: $status) {
+                        ForEach(ReadingStatus.allCases, id: \.self) { s in
+                            Text(s.rawValue).tag(s)
                         }
                     }
-                    TextEditor(text: $book.description)
-                        .frame(height: 150)
+                    Picker("Genre", selection: $genre) {
+                        ForEach(Genre.allCases, id: \.self) { g in
+                            Text(g.rawValue).tag(g)
+                        }
+                    }
+                    Toggle("Favorite", isOn: $isFavorite)
+
+                    TextEditor(text: $summary)
+                        .frame(height: 120)
                 }
-                
-                Section(header: Text("My Rating & Review")) {
-                    StarRatingView(rating: $book.rating)
-                    // TextEditor is for multi-line text input.
-                    TextEditor(text: $book.review)
-                        .frame(height: 150)
+
+                // Rating & Review
+                Section("My Rating & Review") {
+                    Stepper("Rating: \(rating)", value: $rating, in: 0...5)
+                    TextEditor(text: $review)
+                        .frame(height: 120)
                 }
             }
-            .navigationTitle(navigationTitle)
-            .toolbar{
+            .navigationTitle(mode == .add ? "Add Book" : "Edit Book")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        if bookImage != nil {
-                            let newUploadedImage = UploadedImage(imageData: bookImage?.jpegData(compressionQuality: 0.8))
-                            modelContext.insert(newUploadedImage)
-                            do {
-                                try modelContext.save()
-                            } catch {
-                                print("Erorr while saving the image: \(error)")
-                            }
-                            bookCopy.imageId = newUploadedImage.persistentModelID
-                            let _ = print("New image id: \(bookCopy.imageId)")
-                        }
-                        book = bookCopy
-                        dismiss()
-                    }
+                    Button("Save") { save() }
+                        .disabled(!canSave)
                 }
             }
         }
     }
-}
 
+    // Save
+    private func save() {
+        do {
+            switch mode {
+            case .add:
+                let model = PersistentBook(
+                    title: title,
+                    author: author,
+                    imageData: imageData,
+                    summary: summary,
+                    rating: rating,
+                    review: review,
+                    status: status,
+                    genre: genre,
+                    isFavorite: isFavorite
+                )
+                ctx.insert(model)
+
+            case .edit:
+                guard let book else { return }
+                // Keep uppercase rule from initializer
+                book.title = title.uppercased()
+                book.author = author.uppercased()
+                book.summary = summary
+                book.rating = rating
+                book.review = review
+                book.status = status
+                book.genre = genre
+                book.isFavorite = isFavorite
+                if let imageData { book.imageData = imageData }
+            }
+
+            try ctx.save()
+            dismiss()
+        } catch {
+            print("SAVE ERROR:", error)
+        }
+    }
+}
